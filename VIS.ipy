@@ -1,0 +1,145 @@
+# Variability in Vasoactive Medication Use Across Pediatric Intensive Care Units: a PICU Data Collaborative Study, 2010-2022
+# Scripts for Analysis
+# 7/24/2025
+# PDC 8-Site Version 240116 used for this study
+# Note - ChatGPT 3.0, ChatGPT 3.5, ChatGPT-4o and Google AI were used to assist investigators in writing code
+
+##### Import packages
+import pandas as pd 
+import numpy as np
+import os, sys, importlib 
+from dataclasses import dataclass
+from collections import defaultdict
+import glob
+import matplotlib.pyplot as plt
+import re
+from scipy.stats import wilcoxon
+from scipy.stats import kruskal
+
+###### Load Vasoactives Data
+df = pd.read_csv("Encounters_Compiled.csv")
+# This dataset contains one row per ICU encounter with 1 or more vasoactive infusuions
+# There are individual columns for every hour for each vasoactive infusion (ie. Dopamine_hour0)
+
+###### Create Hourly VIS
+
+# Convert doses to standard used in vasoactive inotrope score (VIS)
+# Norepinephrine and Epinephrine: 100 x dose in mcg/kg/min
+# Dopamine & Dobutamine: use as is in mcg/kg/min
+# Vasopressin: 10,000 x dose in U/kg/min 
+# Milrinone: 10 x dose in mcg/kg/min
+
+# Find Dopamine columns 
+dop0 = 'Dopamine_hour0'
+dopnum0 = df.columns.get_loc(dop0)
+print('Dopamine')
+print(dopnum0)
+dop168 = 'Dopamine_hour168'
+dopnum168 = df.columns.get_loc(dop168)
+print(dopnum168)
+
+# Find Dobutamine columns 
+dob0 = 'Dobutamine_hour0'
+dobnum0 = df.columns.get_loc(dob0)
+print('Dobutamine')
+print(dobnum0)
+dob168 = 'Dobutamine_hour168'
+dobnum168 = df.columns.get_loc(dob168)
+print(dobnum168)
+
+# Find Epinephrine columns
+epi0 = 'Epi_hour0'
+num0 = df.columns.get_loc(epi0)
+print('Epinephrine')
+print(num0)
+epi168 = 'Epi_hour168'
+num168 = df.columns.get_loc(epi168)
+print(num168)
+
+# Find Vasopressin columns
+v0 = 'Vaso_hour0'
+num0 = df.columns.get_loc(v0)
+print('Vasopressin')
+print(num0)
+v168 = 'Vaso_hour168'
+num168 = df.columns.get_loc(v168)
+print(num168)
+
+# Find Milrinone columns
+mil0 = 'Milrinone_hour0'
+num0 = df.columns.get_loc(mil0)
+print('Milrinone')
+print(num0)
+mil168 = 'Milrinone_hour168'
+num168 = df.columns.get_loc(mil168)
+print(num168)
+
+# Find Norepinephrine columns
+n0 = 'NRE_hour0'
+nnum0 = df.columns.get_loc(n0)
+print('Norepinephrine')
+print(nnum0)
+n168 = 'NRE_hour168'
+nnum168 = df.columns.get_loc(n168)
+print(nnum168)
+
+# Convert Epinephrine Rows to VIS Equivalent
+df.iloc[ : , 699:868] = df.iloc[ :, 699:868]*100
+
+# Convert Norepi Rows to VIS Equiv
+df.iloc[ : , 19:188] = df.iloc[ :, 19:188]*100
+
+# Convert Vasopressin Rows to VIS Equiv
+df.iloc[ : , 869:1038] = df.iloc[ :, 869:1038]*10000
+
+# Convert Milrinone Rows to VIS Equiv
+df.iloc[ : , 189:358] = df.iloc[ :, 189:358]*10
+
+# Calculate VIS for each hour
+column_indices = [19, 189, 359, 529, 699, 869]
+for i in range(169):
+    new_column_name = f'VIS_hour{i}'
+    sum_values = df.iloc[:, column_indices].sum(axis=1)
+    df[new_column_name] = sum_values
+    column_indices = [index + 1 for index in column_indices]
+print(df)
+
+###### Statistical Analysis
+
+# Check to see if data fit normality assumptions - visual evaluation of symmetry/skew
+# Repeated this step for each variable, 'EpiUse' is shown below as an example
+from matplotlib import pyplot
+pyplot.hist(picu1['EpiUse'], bins = 50)
+pyplot.show()
+
+# Kruskal-Wallis tests - example of Maximum VIS by site shown below
+# Test whether Max VIS differs by site 
+from scipy.stats import kruskal
+# define groups
+group1 = site1['maxVIS']
+group2 = site2['maxVIS']
+group3 = site3['maxVIS']
+group4 = site4['maxVIS']
+# Perform the Kruskal-Wallis test
+h_statistic, p_value = kruskal(group1, group2, group3, group4)
+# Output the results
+print("H-statistic:", h_statistic)
+print("p-value:", p_value)
+
+# Chi-Square tests - example of Epi Use by site shown below
+# Array contains counts for binary variable (Epi yes/no) for each site
+import numpy as np
+from scipy.stats import chi2_contingency
+# Observed frequencies in a numpy array
+observed = np.array([[402, 328],
+                    [1178, 755],
+                    [1036, 1420],
+                    [1099, 590]])
+# Perform the Chi-Square test
+chi2, p_value, degrees_freedom, expected_frequencies = chi2_contingency(observed)
+print(f"Chi-Square Statistic: {chi2}")
+print(f"P-value: {p_value}")
+print(f"Degrees of Freedom: {degrees_freedom}")
+print("Expected Frequencies:\n", expected_frequencies)
+
+###### End
